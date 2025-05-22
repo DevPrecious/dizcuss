@@ -27,6 +27,9 @@ class _ChatPageState extends State<ChatPage> {
     TextEditingController(),
   ];
 
+  // For swipe to reply functionality
+  Map<String, dynamic>? _replyToMessage;
+
   @override
   void initState() {
     super.initState();
@@ -50,7 +53,7 @@ class _ChatPageState extends State<ChatPage> {
   @override
   Widget build(BuildContext context) {
     final textController = TextEditingController();
-    
+
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
@@ -76,74 +79,129 @@ class _ChatPageState extends State<ChatPage> {
                   final msg = _chatController.messages[index];
                   final isMe =
                       msg['senderId'] == AuthController.instance.user?.uid;
-                  return Align(
-                    alignment:
-                        isMe ? Alignment.centerRight : Alignment.centerLeft,
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 6),
-                      child: Column(
-                        crossAxisAlignment:
-                            isMe
-                                ? CrossAxisAlignment.end
-                                : CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment:
-                                isMe
-                                    ? MainAxisAlignment.end
-                                    : MainAxisAlignment.start,
-                            children: [
-                              if (!msg['isMe']) CircleAvatar(radius: 15),
-                              SizedBox(width: 8.w),
-                              Text(
-                                msg['sender'],
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 12.sp,
+                  return Dismissible(
+                    key: Key(msg['id']),
+                    direction: DismissDirection.startToEnd,
+                    background: Container(
+                      color: Colors.blue.withOpacity(0.2),
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      alignment: Alignment.centerLeft,
+                      child: Icon(Icons.reply, color: Colors.white),
+                    ),
+                    confirmDismiss: (direction) async {
+                      setState(() {
+                        _replyToMessage = msg;
+                      });
+                      return false;
+                    },
+                    child: Align(
+                      alignment:
+                          isMe ? Alignment.centerRight : Alignment.centerLeft,
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 6),
+                        child: Column(
+                          crossAxisAlignment:
+                              isMe
+                                  ? CrossAxisAlignment.end
+                                  : CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment:
+                                  isMe
+                                      ? MainAxisAlignment.end
+                                      : MainAxisAlignment.start,
+                              children: [
+                                if (!msg['isMe']) CircleAvatar(radius: 15),
+                                SizedBox(width: 8.w),
+                                Text(
+                                  msg['sender'],
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 12.sp,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 4.h),
+                            Container(
+                              padding: EdgeInsets.all(12),
+                              constraints: BoxConstraints(maxWidth: 280.w),
+                              decoration: BoxDecoration(
+                                color:
+                                    isMe ? Colors.blueAccent : Colors.grey[800],
+                                borderRadius: BorderRadius.only(
+                                  topLeft: Radius.circular(12),
+                                  topRight: Radius.circular(12),
+                                  bottomLeft:
+                                      isMe
+                                          ? Radius.circular(12)
+                                          : Radius.circular(0),
+                                  bottomRight:
+                                      isMe
+                                          ? Radius.circular(0)
+                                          : Radius.circular(12),
                                 ),
                               ),
-                            ],
-                          ),
-                          SizedBox(height: 4.h),
-                          Container(
-                            padding: EdgeInsets.all(12),
-                            constraints: BoxConstraints(maxWidth: 280.w),
-                            decoration: BoxDecoration(
-                              color:
-                                  isMe ? Colors.blueAccent : Colors.grey[800],
-                              borderRadius: BorderRadius.only(
-                                topLeft: Radius.circular(12),
-                                topRight: Radius.circular(12),
-                                bottomLeft:
-                                    isMe
-                                        ? Radius.circular(12)
-                                        : Radius.circular(0),
-                                bottomRight:
-                                    isMe
-                                        ? Radius.circular(0)
-                                        : Radius.circular(12),
-                              ),
-                            ),
-                            child:
-                                msg['type'] == 'poll'
-                                    ? PollWidget(
-                                      poll: msg['poll'] as Poll,
-                                      onVote: (option) {
-                                        _chatController.votePoll(
-                                          msg['id'],
-                                          option,
-                                        );
-                                      },
-                                    )
-                                    : Text(
-                                      msg['text'] ?? '',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 14.sp,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (msg['replyTo'] != null) ...[
+                                    Container(
+                                      padding: EdgeInsets.all(8),
+                                      margin: EdgeInsets.only(bottom: 8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black26,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            msg['replyTo']['sender'],
+                                            style: TextStyle(
+                                              color: Colors.blue,
+                                              fontSize: 12.sp,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                          SizedBox(height: 4),
+                                          Text(
+                                            msg['replyTo']['text'] ?? 'Poll',
+                                            style: TextStyle(
+                                              color: Colors.white70,
+                                              fontSize: 12.sp,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
                                       ),
                                     ),
-                          ),
-                        ],
+                                  ],
+                                  msg['type'] == 'poll'
+                                      ? PollWidget(
+                                        poll: msg['poll'] as Poll,
+                                        onVote: (option) {
+                                          _chatController.votePoll(
+                                            msg['id'],
+                                            option,
+                                          );
+                                        },
+                                      )
+                                      : Text(
+                                        msg['text'] ?? '',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 14.sp,
+                                        ),
+                                      ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   );
@@ -152,46 +210,102 @@ class _ChatPageState extends State<ChatPage> {
             }),
           ),
           SafeArea(
-            child: Container(
-              padding: EdgeInsets.all(8),
-              color: backgroundColor,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: textController,
-                      style: TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                        hintText: 'Type a message...',
-                        hintStyle: TextStyle(color: Colors.white54),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          borderSide: BorderSide(color: Colors.white54),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_replyToMessage != null)
+                  Container(
+                    padding: EdgeInsets.all(8),
+                    color: Colors.grey[900],
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Replying to ${_replyToMessage!['sender']}',
+                                style: TextStyle(
+                                  color: Colors.blue,
+                                  fontSize: 12.sp,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                _replyToMessage!['text'] ?? 'Poll',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12.sp,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
                         ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          borderSide: BorderSide(color: Colors.white54),
+                        IconButton(
+                          icon: Icon(Icons.close, color: Colors.white70),
+                          onPressed: () {
+                            setState(() {
+                              _replyToMessage = null;
+                            });
+                          },
                         ),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      ),
+                      ],
                     ),
                   ),
-                  SizedBox(width: 8),
-                  IconButton(
-                    icon: Icon(Icons.poll, color: Colors.white),
-                    onPressed: () => _showCreatePollDialog(context),
+                Container(
+                  padding: EdgeInsets.all(8),
+                  color: backgroundColor,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: textController,
+                          style: TextStyle(color: Colors.white),
+                          decoration: InputDecoration(
+                            hintText: 'Type a message...',
+                            hintStyle: TextStyle(color: Colors.white54),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(20),
+                              borderSide: BorderSide(color: Colors.white54),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(20),
+                              borderSide: BorderSide(color: Colors.white54),
+                            ),
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      IconButton(
+                        icon: Icon(Icons.poll, color: Colors.white),
+                        onPressed: () => _showCreatePollDialog(context),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.send, color: Colors.white),
+                        onPressed: () {
+                          if (textController.text.trim().isNotEmpty) {
+                            _chatController.sendMessage(
+                              textController.text.trim(),
+                              replyTo: _replyToMessage,
+                            );
+                            setState(() {
+                              _replyToMessage = null;
+                            });
+                            textController.clear();
+                          }
+                        },
+                      ),
+                    ],
                   ),
-                  IconButton(
-                    icon: Icon(Icons.send, color: Colors.white),
-                    onPressed: () {
-                      if (textController.text.trim().isNotEmpty) {
-                        _chatController.sendMessage(textController.text.trim());
-                        textController.clear();
-                      }
-                    },
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],

@@ -44,23 +44,34 @@ class ChatController extends GetxController {
         );
   }
 
-  Future<void> sendMessage(String text) async {
+  Future<void> sendMessage(String text, {Map<String, dynamic>? replyTo}) async {
     if (text.trim().isEmpty) return;
 
     try {
       final user = AuthController.instance.user!;
+      final messageData = {
+        'text': text,
+        'sender': user.displayName ?? 'Anonymous',
+        'senderId': user.uid,
+        'isMe': true,
+        'type': 'text',
+        'createdAt': FieldValue.serverTimestamp(),
+      };
+
+      if (replyTo != null) {
+        messageData['replyTo'] = {
+          'id': replyTo['id'],
+          'text': replyTo['text'],
+          'sender': replyTo['sender'],
+          'type': replyTo['type'],
+        };
+      }
+
       await _firestore
           .collection('rooms')
           .doc(roomId)
           .collection('messages')
-          .add({
-            'text': text,
-            'sender': user.displayName ?? 'Anonymous',
-            'senderId': user.uid,
-            'isMe': true,
-            'type': 'text',
-            'createdAt': FieldValue.serverTimestamp(),
-          });
+          .add(messageData);
     } catch (e) {
       print('Error sending message: $e');
     }
