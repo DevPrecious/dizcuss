@@ -9,6 +9,9 @@ class ChatController extends GetxController {
   final messages = RxList<Map<String, dynamic>>([]);
   final isLoading = false.obs;
 
+  // Available reactions
+  static const reactions = ['❤️', '👍', '👎', '😂', '😮', '😢'];
+
   ChatController({required this.roomId});
 
   @override
@@ -108,6 +111,44 @@ class ChatController extends GetxController {
           });
     } catch (e) {
       print('Error creating poll: $e');
+    }
+  }
+
+  Future<void> addReaction(String messageId, String reaction) async {
+    try {
+      final user = AuthController.instance.user!;
+      final messageRef = _firestore
+          .collection('rooms')
+          .doc(roomId)
+          .collection('messages')
+          .doc(messageId);
+
+      final message = await messageRef.get();
+      final reactions = (message.data()?['reactions'] as Map<String, dynamic>?) ?? {};
+      
+      // Remove existing reaction from this user if any
+      reactions.forEach((key, value) {
+        final users = List<String>.from(value as List);
+        if (users.contains(user.uid)) {
+          users.remove(user.uid);
+          reactions[key] = users;
+        }
+      });
+
+      // Add new reaction
+      if (!reactions.containsKey(reaction)) {
+        reactions[reaction] = [user.uid];
+      } else {
+        final users = List<String>.from(reactions[reaction] as List);
+        if (!users.contains(user.uid)) {
+          users.add(user.uid);
+          reactions[reaction] = users;
+        }
+      }
+
+      await messageRef.update({'reactions': reactions});
+    } catch (e) {
+      print('Error adding reaction: $e');
     }
   }
 

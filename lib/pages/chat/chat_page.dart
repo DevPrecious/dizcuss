@@ -3,6 +3,7 @@ import 'package:dizcuss/controllers/auth_controller.dart';
 import 'package:dizcuss/controllers/chat_controller.dart';
 import 'package:dizcuss/models/poll.dart';
 import 'package:dizcuss/pages/chat/widgets/poll_widget.dart';
+import 'package:dizcuss/pages/chat/widgets/reaction_popup.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
@@ -94,114 +95,267 @@ class _ChatPageState extends State<ChatPage> {
                       });
                       return false;
                     },
-                    child: Align(
-                      alignment:
-                          isMe ? Alignment.centerRight : Alignment.centerLeft,
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 6),
-                        child: Column(
-                          crossAxisAlignment:
-                              isMe
-                                  ? CrossAxisAlignment.end
-                                  : CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment:
-                                  isMe
-                                      ? MainAxisAlignment.end
-                                      : MainAxisAlignment.start,
-                              children: [
-                                if (!msg['isMe']) CircleAvatar(radius: 15),
-                                SizedBox(width: 8.w),
-                                Text(
-                                  msg['sender'],
-                                  style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 12.sp,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: Builder(
+                        builder:
+                            (context) => GestureDetector(
+                              onLongPress: () {
+                                final RenderBox overlay =
+                                    Overlay.of(
+                                          context,
+                                        ).context.findRenderObject()
+                                        as RenderBox;
+                                final RenderBox button =
+                                    context.findRenderObject() as RenderBox;
+                                final Offset position = button.localToGlobal(
+                                  Offset(
+                                    0,
+                                    -60,
+                                  ), // Show popup above the message
+                                  ancestor: overlay,
+                                );
+
+                                showMenu(
+                                  context: context,
+                                  position: RelativeRect.fromLTRB(
+                                    position.dx,
+                                    position.dy,
+                                    position.dx + button.size.width,
+                                    position.dy + 60,
                                   ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 4.h),
-                            Container(
-                              padding: EdgeInsets.all(12),
-                              constraints: BoxConstraints(maxWidth: 280.w),
-                              decoration: BoxDecoration(
-                                color:
-                                    isMe ? Colors.blueAccent : Colors.grey[800],
-                                borderRadius: BorderRadius.only(
-                                  topLeft: Radius.circular(12),
-                                  topRight: Radius.circular(12),
-                                  bottomLeft:
-                                      isMe
-                                          ? Radius.circular(12)
-                                          : Radius.circular(0),
-                                  bottomRight:
-                                      isMe
-                                          ? Radius.circular(0)
-                                          : Radius.circular(12),
-                                ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (msg['replyTo'] != null) ...[
-                                    Container(
-                                      padding: EdgeInsets.all(8),
-                                      margin: EdgeInsets.only(bottom: 8),
-                                      decoration: BoxDecoration(
-                                        color: Colors.black26,
-                                        borderRadius: BorderRadius.circular(8),
+                                  items: [
+                                    PopupMenuItem(
+                                      padding: EdgeInsets.zero,
+                                      child: ReactionPopup(
+                                        messageId: msg['id'],
+                                        onReactionSelected: (reaction) {
+                                          _chatController.addReaction(
+                                            msg['id'],
+                                            reaction,
+                                          );
+                                          Navigator.pop(context);
+                                        },
                                       ),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
+                                    ),
+                                  ],
+                                  elevation: 0,
+                                  color: Colors.transparent,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(24),
+                                  ),
+                                );
+                              },
+                              child: Align(
+                                alignment:
+                                    isMe
+                                        ? Alignment.centerRight
+                                        : Alignment.centerLeft,
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 6),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        isMe
+                                            ? CrossAxisAlignment.end
+                                            : CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            isMe
+                                                ? MainAxisAlignment.end
+                                                : MainAxisAlignment.start,
                                         children: [
+                                          if (!msg['isMe'])
+                                            CircleAvatar(radius: 15),
+                                          SizedBox(width: 8.w),
                                           Text(
-                                            msg['replyTo']['sender'],
-                                            style: TextStyle(
-                                              color: Colors.blue,
-                                              fontSize: 12.sp,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                          SizedBox(height: 4),
-                                          Text(
-                                            msg['replyTo']['text'] ?? 'Poll',
+                                            msg['sender'],
                                             style: TextStyle(
                                               color: Colors.white70,
                                               fontSize: 12.sp,
                                             ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ],
                                       ),
-                                    ),
-                                  ],
-                                  msg['type'] == 'poll'
-                                      ? PollWidget(
-                                        poll: msg['poll'] as Poll,
-                                        onVote: (option) {
-                                          _chatController.votePoll(
-                                            msg['id'],
-                                            option,
-                                          );
-                                        },
-                                      )
-                                      : Text(
-                                        msg['text'] ?? '',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 14.sp,
+                                      SizedBox(height: 4.h),
+                                      Container(
+                                        padding: EdgeInsets.all(12),
+                                        constraints: BoxConstraints(
+                                          maxWidth: 280.w,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color:
+                                              isMe
+                                                  ? Colors.blueAccent
+                                                  : Colors.grey[800],
+                                          borderRadius: BorderRadius.only(
+                                            topLeft: Radius.circular(12),
+                                            topRight: Radius.circular(12),
+                                            bottomLeft:
+                                                isMe
+                                                    ? Radius.circular(12)
+                                                    : Radius.circular(0),
+                                            bottomRight:
+                                                isMe
+                                                    ? Radius.circular(0)
+                                                    : Radius.circular(12),
+                                          ),
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            if (msg['replyTo'] != null) ...[
+                                              Container(
+                                                padding: EdgeInsets.all(8),
+                                                margin: EdgeInsets.only(
+                                                  bottom: 8,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.black26,
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                ),
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      msg['replyTo']['sender'],
+                                                      style: TextStyle(
+                                                        color: Colors.blue,
+                                                        fontSize: 12.sp,
+                                                        fontWeight:
+                                                            FontWeight.w500,
+                                                      ),
+                                                    ),
+                                                    SizedBox(height: 4),
+                                                    Text(
+                                                      msg['replyTo']['text'] ??
+                                                          'Poll',
+                                                      style: TextStyle(
+                                                        color: Colors.white70,
+                                                        fontSize: 12.sp,
+                                                      ),
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                            msg['type'] == 'poll'
+                                                ? PollWidget(
+                                                  poll: msg['poll'] as Poll,
+                                                  onVote: (option) {
+                                                    _chatController.votePoll(
+                                                      msg['id'],
+                                                      option,
+                                                    );
+                                                  },
+                                                )
+                                                : Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Text(
+                                                      msg['text'] ?? '',
+                                                      style: TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 14.sp,
+                                                      ),
+                                                    ),
+                                                    if (msg['reactions'] !=
+                                                            null &&
+                                                        (msg['reactions']
+                                                                as Map<
+                                                                  String,
+                                                                  dynamic
+                                                                >)
+                                                            .isNotEmpty)
+                                                      Container(
+                                                        margin: EdgeInsets.only(
+                                                          top: 8,
+                                                        ),
+                                                        child: Wrap(
+                                                          spacing: 4,
+                                                          children: [
+                                                            for (final entry
+                                                                in (msg['reactions']
+                                                                        as Map<
+                                                                          String,
+                                                                          dynamic
+                                                                        >)
+                                                                    .entries)
+                                                              if ((entry.value
+                                                                      as List)
+                                                                  .isNotEmpty)
+                                                                Container(
+                                                                  padding:
+                                                                      EdgeInsets.symmetric(
+                                                                        horizontal:
+                                                                            8,
+                                                                        vertical:
+                                                                            4,
+                                                                      ),
+                                                                  decoration: BoxDecoration(
+                                                                    color:
+                                                                        Colors
+                                                                            .black26,
+                                                                    borderRadius:
+                                                                        BorderRadius.circular(
+                                                                          12,
+                                                                        ),
+                                                                  ),
+                                                                  child: Row(
+                                                                    mainAxisSize:
+                                                                        MainAxisSize
+                                                                            .min,
+                                                                    children: [
+                                                                      Text(
+                                                                        entry
+                                                                            .key,
+                                                                        style: TextStyle(
+                                                                          fontSize:
+                                                                              16.sp,
+                                                                        ),
+                                                                      ),
+                                                                      SizedBox(
+                                                                        width:
+                                                                            4,
+                                                                      ),
+                                                                      Text(
+                                                                        (entry.value
+                                                                                as List)
+                                                                            .length
+                                                                            .toString(),
+                                                                        style: TextStyle(
+                                                                          color:
+                                                                              Colors.white70,
+                                                                          fontSize:
+                                                                              12.sp,
+                                                                        ),
+                                                                      ),
+                                                                    ],
+                                                                  ),
+                                                                ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                  ],
+                                                ),
+                                          ],
                                         ),
                                       ),
-                                ],
+                                    ],
+                                  ),
+                                ),
                               ),
                             ),
-                          ],
-                        ),
                       ),
                     ),
                   );
