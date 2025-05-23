@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dizcuss/controllers/auth_controller.dart';
+import 'package:dizcuss/controllers/notification_controller.dart';
 import 'package:dizcuss/models/poll.dart';
 import 'package:get/get.dart';
 
@@ -68,6 +69,23 @@ class ChatController extends GetxController {
           'sender': replyTo['sender'],
           'type': replyTo['type'],
         };
+
+        // Send notification to the original message sender
+        final notificationController = NotificationController.instance;
+        final originalSenderId = replyTo['senderId'];
+        if (originalSenderId != user.uid) {
+          final originalSender =
+              await _firestore.collection('users').doc(originalSenderId).get();
+          final playerID = originalSender.data()?['oneSignalPlayerId'];
+          if (playerID != null) {
+            await notificationController.sendReplyNotification(
+              recipientPlayerId: playerID,
+              senderName: user.displayName ?? 'Anonymous',
+              originalMessage: replyTo['text'],
+              replyMessage: text,
+            );
+          }
+        }
       }
 
       await _firestore
@@ -124,8 +142,9 @@ class ChatController extends GetxController {
           .doc(messageId);
 
       final message = await messageRef.get();
-      final reactions = (message.data()?['reactions'] as Map<String, dynamic>?) ?? {};
-      
+      final reactions =
+          (message.data()?['reactions'] as Map<String, dynamic>?) ?? {};
+
       // Remove existing reaction from this user if any
       reactions.forEach((key, value) {
         final users = List<String>.from(value as List);
@@ -147,6 +166,24 @@ class ChatController extends GetxController {
       }
 
       await messageRef.update({'reactions': reactions});
+
+      // Send notification to the message sender
+      final notificationController = NotificationController.instance;
+      final messageSenderId = message.data()?['senderId'];
+      if (messageSenderId != user.uid) {
+        final messageSender =
+            await _firestore.collection('users').doc(messageSenderId).get();
+        final playerID = messageSender.data()?['oneSignalPlayerId'];
+        print(playerID);
+        if (playerID != null) {
+          await notificationController.sendReactionNotification(
+            recipientPlayerId: playerID,
+            senderName: user.displayName ?? 'Anonymous',
+            message: message.data()?['text'] ?? '',
+            reaction: reaction,
+          );
+        }
+      }
     } catch (e) {
       print('Error adding reaction: $e');
     }

@@ -50,7 +50,7 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'apikey',
+    apiKey: 'api_key',
     appId: '1:537140623736:android:11e6416ddb84ba070e708d',
     messagingSenderId: '537140623736',
     projectId: 'sporthub-5e825',
@@ -58,7 +58,7 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'apikey',
+    apiKey: 'api_key',
     appId: '1:537140623736:ios:6cd426ec64077cad0e708d',
     messagingSenderId: '537140623736',
     projectId: 'sporthub-5e825',
